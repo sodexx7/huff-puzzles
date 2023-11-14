@@ -7,7 +7,9 @@
  *
  *  The task is to write within the `MAIN` macro below, huff code to get and return the amount of ether sent as part of that call 
 */
-
 #define macro MAIN() = takes(0) returns(0) {
-    
+    callvalue              // [msg.value]
+
+    0x00 mstore           //  in memory first bytes32
+    0x20 0x00 return      // return the result
 }

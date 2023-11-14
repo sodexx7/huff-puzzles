@@ -8,5 +8,10 @@
  */
 
 #define macro MAIN() = takes(0) returns(0) {
+    caller      // address(msg.sender)
+    balance     // return msg.sender's balance to the stack
+
+    0x00 mstore           //  in memory first bytes32
+    0x20 0x00 return      // return the result
    
 }
