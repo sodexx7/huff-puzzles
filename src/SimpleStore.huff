@@ -13,8 +13,43 @@
 
 #define function store(uint256) payable returns()
 #define function read() payable returns(uint256)
+#define constant VALUE = FREE_STORAGE_POINTER() // define a slot pointer
 
 
 #define macro MAIN() = takes(0) returns(0) {
-    
+    // Get the function selector
+    0x00
+    calldataload
+    0xE0            // 224 32bytes(256bits)-4bytes(32bits)
+    shr             //	Logical right shift operation
+
+    // Jump to the implementation of the ADD1 function if the calldata matches the function selector
+    dup1            
+    __FUNC_SIG(store) eq store jumpi
+    __FUNC_SIG(read) eq read jumpi   
+
+    // no function match, just revert
+    0x00 0x00 revert
+
+    store:
+        STORE()
+    read:
+        READ()
+  
+}
+
+// don't check the value which will be set 
+#define macro STORE() = takes(0) returns(0) {
+    0x04 calldataload       // the value will be set [value]
+    [VALUE]                 //[slot_pointer,value]
+    sstore                  // store the value in slot
+}
+
+#define macro READ() = takes(0) returns(0) {
+    [VALUE]                 //[slot_pointer]
+    sload                   // [VALUE]
+    0x00                   // [0x00, value]
+    mstore                  // []
+
+    0x20 0x00 return      // return the result
 }
