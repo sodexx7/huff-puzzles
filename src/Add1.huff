@@ -30,7 +30,7 @@
         ADD1()
 
 }
-// doing
+
 #define macro ADD1() = takes(0) returns(0) {
     
     0x04 calldataload     // load first 32 bytes onto the stack [uint256]
