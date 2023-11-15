@@ -14,4 +14,67 @@
 
 #define macro MAIN() = takes(0) returns(0) {
 
+    // Get the function selector
+    0x00
+    calldataload
+    0xE0            // 224 32bytes(256bits)-4bytes(32bits)
+    shr             //	Logical right shift operation
+
+
+     // Jump to the implementation of the multiply(uint256, uint256) function if the calldata matches the function selector
+    __FUNC_SIG(multiply) eq multiply jumpi
+
+    // Revert if an unrecognized function occured. 
+    0x00 0x00 revert
+
+    // how to transfer params?
+    multiply:
+        MULTIPLY()
+    
+}
+
+// to dig more? the below order can be optimize?
+// can th macro directly get the params?
+#define macro MULTIPLY()= takes(2) returns(0) {
+
+
+    // if one of the data equal zero, just return zero
+    0x04 calldataload       // [fist_value]
+    0x24 calldataload       // [second_value,fist_value]
+    dup1                    // [second_value,second_value,fist_value]  
+    dup3                    // [fist_value,second_value,second_value,fist_value]    
+    mul                     // [result,second_value,fist_value]  
+    dup1                    // [result,result,second_value,fist_value]  
+    non_zero_result  jumpi  // [result,second_value,fist_value]    if  result == 0    
+         0x00 mstore        //  [second_value,fist_value]
+         pop
+         pop                // []
+         0x20 0x00 return      // return the result
+    non_zero_result:       // [result,second_value,fist_value] result !=0
+
+    // check whether it's overflow or not by a == (a * b) / b)
+    dup1                   // [result,result,second_value,fist_value] 
+    swap3                  // [fist_value,result,second_value,result] 
+    swap1                  // [result,fist_value,second_value,result]  
+    div                    // [check_result,second_value,result]
+    eq  //doing jumpi      // [1/0,result] 
+    is_not_overflow jumpi   // if check_result == second_value, the top stack value  =1 , so just jump to the is_not_overflow;// if 
+                            // if check_result != second_value, the top stack value  =0 , so which shows occur the overflow, just revert
+        pop                 // []                     
+        0x00 0x00 revert   // overflow check
+    is_not_overflow:       // [result] 
+    0x00 mstore             // 
+    0x20 0x00 return        // 
+
+
+/**
+    Notice:
+    1: swap1    swap bewteen 1th-2th
+    2: jumpi    stack_top1_value stack_top2_value  jumpi 
+                if stack_top1_value = 0, executing the following instructions
+                if stack_top1_value !=0, jump the loaction for the stack_top2_value
+        question?
+        offcial intro: 	counter b jumpi.  which seems not consistant with the above use? 
+           pehaps it's related with huff label 
+*/    
 }
