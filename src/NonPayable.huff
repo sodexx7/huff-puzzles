@@ -9,5 +9,13 @@
  */
 
 #define macro MAIN() = takes(0) returns(0) {
-
+    0x00                   // [0] 
+    callvalue              // [msg.value,0]
+    gt non_payable jumpi   // [1] if >0 , just jump to non_payable which revert
+                           // if  value == 0 ,just return true
+        0x01
+        0x00 mstore
+        0x20 0x00 return      
+    non_payable:
+    0x00 0x00 revert              
 }
