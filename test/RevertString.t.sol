@@ -17,6 +17,12 @@ contract RevertStringTest is Test {
     function testRevertString() public {
         (bool success, bytes memory revertData) = address(revertString).call("");
         require(!success, "call expected to fail");
+
+        // the abi store string as the https://docs.huff.sh/tutorial/hello-world/#primer-abi-encoding
+        // bytes memory encodeData =  abi.encode("Only Huff");
+        // console.log("encodeData");
+        // console.logBytes(encodeData);
+        // console.logBytes(abi.decode(encodeData,(bytes)));
         assertEq(
             keccak256(bytes("Only Huff")),
             keccak256(abi.decode(revertData, (bytes))),
