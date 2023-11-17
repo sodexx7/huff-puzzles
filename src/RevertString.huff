@@ -61,4 +61,6 @@
 //  cast format-bytes32-string "Hello, world!"
 // https://docs.huff.sh/tutorial/hello-world/#advanced-topic-the-seaport-method-of-returning-strings
 
+// 3 word, first word: start place, second word: length, third word: actual value.  so string at least: 3 words
+
 }

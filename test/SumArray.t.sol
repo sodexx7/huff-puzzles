@@ -18,12 +18,20 @@ contract SumArrayTest is Test, NonMatchingSelectorHelper {
     }
 
     function testSumArray(uint256[] memory array) external {
+        
         uint256 expected;
         for (uint256 i; i < array.length; ++i) {
             unchecked {
                 expected += array[i];
             }
         }
+        // (bool success, bytes memory revertData) = address(sumArray).call(abi.encodeWithSignature("sumArray(uint256[])",array));
+        // console.log("length(array)");
+        // console.log(array.length);
+        // console.log("expected");
+        // console.log(expected);
+        // console.log("test memory");
+        // console.logBytes(revertData);
 
         uint256 sum = sumArray.sumArray(array);
         assertEq(sum, expected, "Wrong sum of array");

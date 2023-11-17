@@ -13,4 +13,111 @@
 
 #define macro MAIN() = takes(0) returns(0) {
 
+    // Get the function selector
+    0x00
+    calldataload
+    0xE0            // 224 32bytes(256bits)-4bytes(32bits)
+    shr             //	Logical right shift operation
+
+    // Jump to the implementation of the ADD1 function if the calldata matches the function selector
+    __FUNC_SIG(sumArray) eq sumArray jumpi
+
+    sumArray:
+        SUMARRAY()
+
+}
+
+#define macro SUMARRAY() = takes(0) returns(0) {
+
+
+    /**
+    For dynamatic array T[] (uint256[]), the rule of abi.encode as below,except the function selector
+    1:the 1th 32bytes: the start place;  
+    2:the 2th 32bytes: the size of this array.
+    3:the 3th-nth, each value of the array
+
+
+    This implementation is based on the calldata and all the calculations mostly based on the stack.
+    there are three variables: 
+    currentSum_value:         when find a new element, add it to the value. for example[1,2,3], when find the second value, then the currentSum_value = 1+2
+    last_element_place:       the postion of the last value of the array
+    current_element_place:    the current element's position of the array.
+
+    Each time, when find a new element,then change the current_element_place to the next_element_place meanwhile updating the currentSum_value
+    when the current_element_place == last_element_place, which shows all the elements have been found, just exit. and return the currentSum_value
+
+    TODO
+    1: this implementation seems complex, what's about using memory or slot.
+        The below seems use the slot to implementate.
+        https://github.com/huff-language/huffmate/blob/main/src/data-structures/Arrays.huff
+    2: perhaps when there are many numbers, can trigger the stack max slots???
+    3: Some opcode can repeate, or more opcodes can changed to one line
+
+
+
+    **/
+
+    /*******************************************Calculate the last_element_place,First element place and its value **********************************************/
+
+
+    0x04 calldataload       // [0x20] the first_argument's start_place, in this example is the array
+    0x04  add               // [length_value_place(0x24)] the exact position for the start_place vlue shoud add 0x04, which is the function selector
+    dup1                    // [length_value_place,length_value_place]
+    0x20 add                // [current_element_place,length_value_place]
+    dup1                    // [current_element_place,current_element_place,length_value_place]
+    swap2                   // [length_value_place,current_element_place,current_element_place]
+
+    calldataload            // [length_value,current_element_place,current_element_place] 
+    0x01 swap1 sub          // [length_value-1,current_element_place,current_element_place] 
+
+    0x20  mul               // [all_length,current_element_place,current_element_place] 
+    add                     // [last_element_place,current_element_place] 
+
+    swap1                   // [current_element_place,last_element_place] 
+    dup1                    // [current_element_place,current_element_place,last_element_place] 
+    calldataload            // [currentSum_value,current_element_place,last_element_place] 
+    swap2                   // [last_element_place,current_element_place,currentSum_value] 
+
+    dup2                    // [current_element_place,last_element_place,current_element_place,currentSum_value] 
+    dup2                    // [last_element_place,current_element_place,last_element_place,current_element_place,currentSum_value] 
+
+
+    /*******************************************When the current_element_place == last_element_place, exit the loop and rerturn the sum ****************************/
+
+    0x00 start jumpi
+
+        continue:           // [last_element_place,current_element_place,currentSum_value] 
+
+            // judge the   last_element_place == next_element_place. if equal ,just exist, otherwise repeat the action
+            eq end jumpi    // if next_element_place == last_element_place, just end, otherwise repeat the action
+            
+            start:
+            swap1           // [current_element_place,last_element_place,currentSum_value]
+
+            // add the next value
+            0x20 add        // [next_element_place,last_element_place,currentSum_value]
+            dup1            // [next_element_place,next_element_place,last_element_place,currentSum_value]   
+            calldataload    // [next_element_value,next_element_place,last_element_place,currentSum_value]  
+
+         
+            swap1           // [next_element_place,next_element_value,last_element_place,currentSum_value]  
+            swap3           // [currentSum_value,next_element_value,last_element_place,next_element_place]
+            add             // [currentSum_value(new),last_element_place,next_element_place]
+
+            // put the  first stack postion in the third stack postion
+            swap2   swap1    // [last_element_place,next_element_place,currentSum_value(new)]
+
+            // copy the first and second element
+            dup1  dup3  swap1   // [last_element_place,next_element_place,last_element_place,next_element_place,currentSum_value(new)]
+
+            0x01 continue jumpi
+
+    end:                    // [last_element_place,current_element_place,currentSum_value]
+    pop 
+    pop
+    0x00 mstore
+    0x20 0x00 return
+
+    // https://github.com/huff-language/huffmate/blob/main/src/data-structures/Arrays.huff
+
 }
