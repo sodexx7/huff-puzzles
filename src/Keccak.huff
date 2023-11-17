@@ -9,5 +9,13 @@
 
 
  #define macro MAIN() = takes(0) returns(0) {
+
+    // just keccak256 all the calldata and return the value
+
+    calldatasize  0x00 0x00 calldatacopy // copy all calldata into the memory. when using call, for there just only the params.
+    msize 0x00  sha3                    // keccak all the  memory's data, TODO, if memory's length was expand ins some situation. Is it OK?
     
+    0x00 mstore
+    0x20 0x00 return                      
+  
  }

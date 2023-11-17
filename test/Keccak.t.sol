@@ -16,8 +16,12 @@ contract KeccakTest is Test {
     {
         vm.assume(data.length < 33 && data.length > 0);
         bytes32 expectedHash = keccak256(abi.encode(data));
+        // console.log("abi.encode(data)");
+        // console.logBytes(abi.encode(data));
 
         (bool success, bytes memory res) = keccak.call(abi.encode(data));
+        // console.log("res");
+        // console.logBytes(res);
         require(success, "call failed");
         assertEq(expectedHash, abi.decode(res, (bytes32)), "huff keccak hash != expectedHash");
     }
