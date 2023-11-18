@@ -27,10 +27,6 @@
 
 #define macro MAXOFARRAY() = takes(0) returns(0) {
 
-
-    // TODO
-    // more implementation, my implementation is using memory
-
     /**
     For the dynamatic array, 1th value:postion.2th:length,3th-->nth, each value
     
@@ -45,7 +41,6 @@
 
     tips:
     1) dup the first stack values in order: dup1 dup3  swap1 
-    2)
     **/
 
 
