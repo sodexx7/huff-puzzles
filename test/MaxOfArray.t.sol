@@ -30,6 +30,12 @@ contract MaxOfArrayTest is Test, NonMatchingSelectorHelper {
         arr[8] = 67251781;
         arr[9] = 27;
 
+        // (bool success, bytes memory revertData) = address(maxOfArray).call(abi.encodeWithSignature("maxOfArray(uint256[])",arr));
+        // console.log("revertData");
+        // console.logBytes(revertData);
+        // return;
+
+        
         uint256 x = maxOfArray.maxOfArray(arr);
         assertEq(x, 67251781, "expected max of arr to be 67251781");
 

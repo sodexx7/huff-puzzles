@@ -10,5 +10,108 @@
 #define function maxOfArray(uint256[]) payable returns(uint256)
 
 #define macro MAIN() = takes(0) returns(0) {
+
+     // Get the function selector
+    0x00 calldataload 0xE0 shr
+
+     // Jump to the implementation of the maxOfArray function if the calldata matches the function selector
+    __FUNC_SIG(maxOfArray) eq maxOfArray jumpi
+
+     // Revert if an unrecognized function occured. 
+    0x00 0x00 revert
+
+    maxOfArray:
+        MAXOFARRAY()
    
+}
+
+#define macro MAXOFARRAY() = takes(0) returns(0) {
+
+
+    // TODO
+    // more implementation, my implementation is using memory
+
+    /**
+    For the dynamatic array, 1th value:postion.2th:length,3th-->nth, each value
+    
+    This implementation, firstly copy all data into the memory, and then calculate the data: [current_max_value,current_based_index_location,last_value_location]
+        current_max_value, is the biggest value which location <=current_based_index_location.
+        last_value_location: the last element's location of the array.
+    after getting the current_max_value, then update the current_based_index_location. if current_based_index_location == last_value_location, exit.
+
+    TODO: 
+    1)this implementation is mostly based on the memory, other option can make the memory store the current_max_value after each comparing.
+    2)make the opcodes combinations seems more clean
+
+    tips:
+    1) dup the first stack values in order: dup1 dup3  swap1 
+    2)
+    **/
+
+
+    
+    0x04 calldatasize sub  0x04 0x00 calldatacopy // copy all calldata into the memory, except the selector
+
+    /*************************************************************Empty Array check ************************************************************************/
+    0x00 mload  // [length_value_location] get the beginning location of array's value
+    dup1        // [length_value_location,length_value_location]
+    mload       // [length_value,length_value_location]
+    iszero emptyArray jumpi // if the array is empty, just revert
+
+
+    /*********************************Get the current_max_value,current_based_index_location,last_value_location ********************************************/
+    
+    dup1        // [length_value_location,length_value_location]
+    mload       // [length,length_value_location] 
+    swap1       // [length_value_location,length]
+    0x20 add dup1    // [1th_value_location,1th_value_location,length]  
+
+    swap2       // [length,1th_value_location,1th_value_location]  
+
+    0x01 swap1 sub // [length-1,1th_value_location,1th_value_location]  
+    0x20 mul add    // [last_value_location,1th_value_location]
+
+    swap1 dup1      // [1th_value_location,1th_value_location,last_value_location]
+    mload           // [current_max_value,current_based_index_location,last_value_location]  make the 1th_value_location as the current_max_valuem and 1th_value_location as the current_based_index_location
+    
+    /*********************************Update the current_based_index_location and current_max_value during each compariation********************************************/
+    0x00 start jumpi   
+
+        continue: 
+
+            swap2           // [last_value_location,current_based_index_location,current_max_value]
+            dup1 dup3      // [last_value_location,current_based_index_location,last_value_location,current_based_index_location,current_max_value]
+
+            eq end jumpi        // if last_value_location == 1th_value_location, exist the loop
+            
+            start:              // [last_value_location,current_based_index_location,current_max_value]
+            
+            swap2 swap1      // [current_based_index_location,current_max_value,last_value_location]     
+            0x20 add         // [following_index_location,current_max_value,last_value_location]
+
+            dup1       // [following_index_location,following_index_location,current_max_value,last_value_location]
+            mload      // [following_value,current_based_index_location,current_max_value,last_value_location]
+            swap1 swap2   // [current_max_value,following_value,current_based_index_location,last_value_location]
+            
+            dup1 dup3  swap1   // [current_max_value,following_value,current_max_value,following_value,current_based_index_location,last_value_location]
+
+            // only keep the max Num               
+            lt compareNums jumpi  // the result as 0 which means: current_max_value >= the_following_value, only keep the current_max_value
+                // pop the_following_value
+                swap1 pop   // [current_max_value,current_based_index_location,last_value_location]
+                0x01 continue jumpi
+            compareNums: // the result as 1, current_max_value < the_following_value
+                // pop the current_max_value
+                pop         // [the_following_value,current_based_index_location,last_value_location]
+                0x01 continue jumpi  
+    end:
+    pop
+    pop
+    0x00 mstore 
+    0x20 0x00 return 
+
+
+    emptyArray:
+        0x00 0x00 revert
+    
 }
