@@ -19,6 +19,22 @@ contract CreateTest is Test, NonMatchingSelectorHelper {
     function testCreate() external {
         address newContract = create.makeContract();
         assertEq(newContract != address(0), true, "new contract cannot be address 0");
+        
+        // console.log("newContract");
+        // console.logAddress(newContract);
+
+        // address createAddress = address(create);
+        // uint size;
+        // assembly{
+        //     size :=  extcodesize(newContract)
+        // }
+        // console.log(size);
+
+
+        // (bool success1, bytes memory revertData) = address(newContract).call("");
+        // console.log("revertData");
+        // console.logBytes(revertData);
+        // return;
 
         (bool success, bytes memory data) = newContract.call("");
         require(success, "check return of new contract failed");

@@ -13,5 +13,60 @@
 
 
  #define macro MAIN() = takes(0) returns(0) {
-    
+
+    // Get the function selector
+    0x00 calldataload 0xE0 shr
+
+     // Jump to the implementation of the makeContract function if the calldata matches the function selector
+    __FUNC_SIG(makeContract) eq makeContract jumpi
+
+     // Revert if an unrecognized function occured. 
+    0x00 0x00 revert
+
+    makeContract:
+        MAKECONTRACT()
  }
+
+ #define macro MAKECONTRACT() = takes(0) returns(0) {
+
+    /**
+
+    There are three levels about creat new contract with the related code.
+    1) the newContract's code which return the caffe.
+    2) When EVM create a new contract, there are creationCode, after executing creationCode, should return the 1)'s code.
+    3) For this puzzle, should take the creationCode as the initialisation code, then call create.
+
+
+    The details as below.
+    
+    1:  "620caffe600052596000f3" the bytesCode return "00000000000000000000000000000000000000000000000000000000000caffe", which should as the newContract's deployedCode
+        https://www.evm.codes/playground?fork=shanghai&callValue=9&unit=Wei&codeType=Bytecode&code='620caffe600052596000f3'_
+    
+    2: the bytesCode  0x6a620caffe600052596000f3600052600b6015f3, which is the initialisation code. after executing the creat opcode with this bytescode, the return data will be the 
+        new contract's code.  "620caffe600052596000f3"
+
+        https://www.evm.codes/playground?fork=shanghai&unit=Wei&codeType=Mnemonic&code='lcreatjnewYg%2C%20after%20executepXqm%2CpreturnYodjisXzm~20_q~0vMSTOREy14y0cy00vCREATEvvlreturnpnew%20Cg%22s%20address~0y20~0vRETURNv'~vPUSHz620caffeZ59k0f3y~1%20_v%5Cnq6azZkb6015f3p%20thjm%5C'l%2F%2F%20k600je%20gontract_%200xZk052Y%20cX%20m%01XYZ_gjklmpqvyz~_
+
+        https://www.evm.codes/?fork=shanghai
+
+    Other tip:
+    1: the return data should as "00000000000000000000000000000000000000000000000000000000000caffe", which satisfy the abi.decode() reuqirements.
+        TODO how the abi decode the bytes?
+
+
+    Other references:
+    1: https://www.rareskills.io/post/ethereum-contract-creation-code
+    2: https://youtu.be/eE7QTSNmHxo?si=OPuCMDEd1_rJ1KfG (A Complete Guide to Contract Creation on Blockchain & How To Not Get Hacked)
+    */
+
+    // 620caffe600052596000f3  the new contract's ultimate code, which return "00000000000000000000000000000000000000000000000000000000000caffe"
+    // 0x6a620caffe600052596000f3600052600b6015f3 the initialisation code
+
+    // below work, return ...0caffe 
+    0x6a620caffe600052596000f3600052600b6015f3   0x00 mstore
+                                0x14   0x0c      0x00 create    // specify the initialisation code's position
+                                                 0x00 mstore
+                                            0x20 0x00 return    // return new conract's address
+
+
+}
