@@ -27,7 +27,7 @@
     // Revert if an unrecognized function occured. 
     0x00 0x00 revert
 
-    // how to transfer params?
+    
     multiply:
         MULTIPLY()
     

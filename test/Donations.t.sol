@@ -17,6 +17,7 @@ contract DonationsTest is Test {
     }
 
     function testDonations(uint256[] memory amounts) public {
+
         uint256 sum;
         for (uint256 i; i < amounts.length;) {
             vm.deal(address(this), amounts[i]);

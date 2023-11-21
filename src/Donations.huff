@@ -5,8 +5,85 @@
  *  also have a getter function that returns how much an address has donated. Addresses can donate several times
  */
 
-#define function donated(address) payable returns(uint256)
+
+#define function donated(address) payable returns(uint256) // the payable's meaning in there. 
+
+#define constant ADDRESSES_DONATED = FREE_STORAGE_POINTER() // store the amount each address donated 
 
 #define macro MAIN() = takes(0) returns(0) {
+
+    /***
+    1: for the receive funtion, if the msg.value>0, just make the transaction suceess, then this contract will receive the eth.
+    2: For this contract, Need to store the amount each address donated. So each time when receive eth,just store or update the new amount for this address.
+    3: How to store each contract's donated amount, using the mapping mechniasm, just like solidity how to implement the map.
+
+        the actual slot position:keccak256(mapping slot,key), store the amount in this slot position
+
+        reference: https://github.com/huff-language/huffmate/blob/4e2c9bd3412ab8cc65f6ceadafc01a1ff1815796/src/data-structures/Hashmap.huff#L20C1-L33C2
+                   https://github.com/RareSkills/Udemy-Yul-Code/blob/17aec03882dd951b0d15707d71b6ab38626d853c/Video-06-Storage-3.sol#L109     
+
+    Ignore points:
+    1. doestn't check when sendingValue with calling some functions
+    2. if there are no funtion match,ignore the check
+
+    TODO
+    1.Reorginze the function, make it more resuable.
+    **/
+
+    // if without any calldata and msg.value > 0, update ADDRESSES_DONATED
+    0x00 calldatasize gt has_calldata jumpi
+
+        callvalue iszero no_value jumpi // if no calldata and msg.value >0 ,just update balance
+            [ADDRESSES_DONATED]   // [ADDRESSES_DONATED's slot]
+            caller                // [caller_address,ADDRESSES_DONATED's slot]
+            GET_SLOT_FROM_KEYS()  // [actual_slot] 
+            UPDATE_BALANCE_BY_SLOT() 
+        no_value:   // just ignore
+
+    has_calldata:
     
+    // Get the function selector
+    0x00 calldataload 0xE0 shr
+
+    //  Jump to the implementation of the donated function if the calldata matches the function selector
+    __FUNC_SIG(donated) eq donated jumpi
+
+    donated:
+        [ADDRESSES_DONATED]   // [ADDRESSES_DONATED's slot]
+        caller                // [caller_address,ADDRESSES_DONATED's slot]
+        DONATED()
+    
+}
+
+// getter function
+#define macro DONATED() = takes(0) returns (0) {
+
+    GET_SLOT_FROM_KEYS()    // [actual_slot]
+    sload 
+    0x00 mstore 
+    0x20 0x00 return
+}
+
+// give two value, calculate the keccak256 results
+#define fn GET_SLOT_FROM_KEYS() = takes(2) returns (1) {
+    
+    // Input stack: [caller_address,ADDRESSES_DONATED's slot]
+    0x00 mstore         
+    0x20 mstore
+
+    // Hash the data, generating the slot which actually store the balance.
+    0x40 0x00  sha3       // [64]
+}
+
+
+#define fn UPDATE_BALANCE_BY_SLOT() = takes(1) returns (0) {
+
+    dup1        // [actual_slot,actual_slot]
+    // get the original value, for there,just add, don't consider the gas issues
+    sload       // [original_value,actual_slot]
+    callvalue // [callValue,original_value,actual_slot]
+    add          // [new_value,actual_slot]
+    swap1        // [actual_slot,new_value]
+    sstore 
+
 }
