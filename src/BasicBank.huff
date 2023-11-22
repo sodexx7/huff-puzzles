@@ -8,9 +8,145 @@
  *      - keeping track of and viewing balance
  */
 
+/**
+1: TOOD, should check receive logic has more effective way? can reference the remix.
+**/
+
 #define function balanceOf(address) payable returns(uint256)
 #define function withdraw(uint256) payable returns()
 
+#define constant ADDRESSES_DEPOSITED = FREE_STORAGE_POINTER() // store the amount each address deposited 
+
+/**
+
+    todo
+    1: reorginze the funciton, make it more clean
+    2:check the 'receive' has more effective way
+
+
+    tips: 
+    1) the call funtion have checked balance if the the eth is not enough, which have consider the gas
+    2) if withdraw zero, just ignore and make the transaction complete
+
+***/
 #define macro MAIN() = takes(0) returns(0) {
 
+     // if without any calldata and msg.value > 0, update ADDRESSES_DEPOSITED
+    0x00 calldatasize gt has_calldata jumpi
+
+        callvalue iszero no_value jumpi // if no calldata and msg.value >0 ,just update balance
+            
+            // get the actual slot
+            [ADDRESSES_DEPOSITED]   // [ADDRESSES_DEPOSITED's slot]
+            caller                // [caller_address,ADDRESSES_DEPOSITED's slot]
+            GET_SLOT_FROM_KEYS()  // [actual_slot]
+            
+            // get the new balance and update            
+            dup1                  // [actual_slot,actual_slot]
+            sload       // [original_value,actual_slot]
+            callvalue // [callValue,original_value,actual_slot]
+            add          // [new_value,actual_slot]
+            swap1        // [actual_slot,new_value]
+            UPDATE_BALANCE_BY_SLOT() 
+        no_value:   // just ignore
+
+    has_calldata:
+
+     // Get the function selector
+    0x00 calldataload 0xE0 shr
+
+     // Jump to the implementation of the balanceOf/withdraw function if the calldata matches the function selector
+     dup1
+    __FUNC_SIG(balanceOf) eq balanceOf jumpi
+    __FUNC_SIG(withdraw)  eq withdraw jumpi
+
+
+    balanceOf:
+        [ADDRESSES_DEPOSITED]   // [ADDRESSES_DEPOSITED's slot]
+        0x04 calldataload       // [query_address,ADDRESSES_DEPOSITED's slot]
+        BALANCEOF()
+        0x00 mstore 
+        0x20 0x00 return
+
+    withdraw:
+        0x00 0x04 calldataload gt nonZero jumpi
+            0x00 0x00 return    // if withdraw zero, just return
+        nonZero:
+        [ADDRESSES_DEPOSITED]   // [ADDRESSES_DEPOSITED's slot]
+        caller                // [caller_address,ADDRESSES_DEPOSITED's slot]
+        WITHDRAW()    
+
+}
+
+// before transfer, 1:check current_balance/withdraw_value 2:update new value  3: call call
+#define macro WITHDRAW() = takes(2) returns(0) {
+
+    // input stack             // [caller_address,ADDRESSES_DEPOSITED's slot]
+
+    // get current_balance and the corrospending's actual_slot
+    dup1 dup3 swap1             // [caller_address,ADDRESSES_DEPOSITED's slot,caller_address,ADDRESSES_DEPOSITED's slot]
+    BALANCEOF()                 // [current_balance,caller_address,ADDRESSES_DEPOSITED's slot]
+    swap2 swap1                 // [caller_address,ADDRESSES_DEPOSITED's slot,current_balance]
+    GET_SLOT_FROM_KEYS()        // [actual_slot,current_balance]
+    swap1                       // [current_balance,actual_slot]
+    
+    // compare withdraw_value with current_balance
+    0x04 calldataload   // [withdraw_value,current_balance,actual_slot]
+    dup1  dup3 swap1    // [withdraw_value,current_balance,withdraw_value,current_balance,actual_slot]
+                
+    gt iszero enoughBalance jumpi  // withdraw_value <= current_balance, <=====>  the opposite of   withdraw_value > current_balance
+        0x00 0x00 revert    
+    enoughBalance:   // [withdraw_value,current_balance,actual_slot]
+   
+
+    swap1 sub        // [new_value,actual_slot]
+    swap1            // [actual_slot,new_value]
+    UPDATE_BALANCE_BY_SLOT()
+
+
+    // This demo, the target contract has no code, so the 4 deepest value in stack is 0x00    
+    // gas              gas
+    // address          address
+    // value            0x04 calldataload
+    // argsOffset       0x00
+    // argsSize         0x00
+    // retOffset        0x00
+    // retSize          0x00
+
+
+    0x00 0x00 0x00 0x00  // [argsOffset,argsSize,retOffset,retSize,current_balance,caller_address,ADDRESSES_DEPOSITED's slot]
+    0x04 calldataload    // [value,argsOffset,argsSize,retOffset,retSize,current_balance,caller_address,ADDRESSES_DEPOSITED's slot] 
+    caller               // [address,value,argsOffset,argsSize,retOffset,retSize,current_balance,caller_address,ADDRESSES_DEPOSITED's slot] 
+    gas                  // [gas,address,value,argsOffset,argsSize,retOffset,retSize,current_balance,caller_address,ADDRESSES_DEPOSITED's slot]
+    call
+
+    // return the result 0:false,1:true
+    0x00 mstore 
+    0x20 0x00 return 
+
+}
+
+// getter function
+#define macro BALANCEOF() = takes(2) returns (1) {
+    //input slack [query_address,ADDRESSES_DEPOSITED's slot]
+
+    GET_SLOT_FROM_KEYS()    // [actual_slot]
+    sload                   // [balance_value]
+}
+
+// give two value, calculate the keccak256 results
+#define fn GET_SLOT_FROM_KEYS() = takes(2) returns (1) {
+    
+    // Input stack: [caller_address,ADDRESSES_DONATED's slot]
+    0x00 mstore         
+    0x20 mstore
+
+    // Hash the data, generating the slot which actually store the balance.
+    0x40 0x00  sha3       // [64]
+}
+
+
+#define fn UPDATE_BALANCE_BY_SLOT() = takes(2) returns (0) {
+    //input stack [actual_slot,new_balance]
+    sstore 
 }
