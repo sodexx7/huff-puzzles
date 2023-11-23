@@ -14,5 +14,135 @@
 
 
  #define macro MAIN() = takes(0) returns(0) {
+
+    // Get the function selector
+    0x00 calldataload 0xE0 shr
+
+     // Jump to the implementation of the distribute function if the calldata matches the function selector
+    __FUNC_SIG(distribute) eq distribute jumpi
+
+     // Revert if an unrecognized function occured. 
+    0x00 0x00 revert
+
+    distribute:
+        DISTRIBUTE()
    
  }
+
+/**
+    This implementation firstly copy all array into the memory, then based on the [1th_value_location,last_address_location] with the memory data getting each 
+    address and transfer eth.
+
+    Some desgin points
+    1: TRANSFER_ETH() which will return true or false, if one revert, all transfer will failue.
+    2: If callvalue is 0, just directly return true.
+    3: If array is empty, just revert
+
+    Notices:
+    1:For the jump label end, the below must have code, otherwise will repeat the loop logic.
+
+    TODO:
+    1: Are there more effective way to debug the huff code. Such as show the memory and stack dynmatic data. 
+    2: The test may failure, but very little. Now can't sure the reason, perhaps the reason is realted with foundry test ways.
+    3: Some opcodes should organize as a funtion to make the test efficiently。
+
+**/
+
+#define macro DISTRIBUTE() = takes(0) returns(0) {
+
+    // if value equal 0 ,just return true 
+    0x00 callvalue gt has_value jumpi
+        0x01
+        0x00 mstore
+        0x20 0x00 return
+    has_value:
+
+
+    // check whether or not the array is empty, for this case, length_value store in the 0x24
+    0x00 0x24 calldataload gt NonEmptyArray jumpi
+        0x00 0x00 revert
+    NonEmptyArray:
+
+
+    
+    0x04 calldatasize sub  0x04 0x00 calldatacopy // copy all calldata related with address[] into the memory
+
+   
+    /*************************************************Store the AverageValue in the memory(last_address_location+0x20) ***************************************/
+    /*************************************************return 1th_value_location and last_address_location ****************************************************/
+
+    0x00 mload  // [length_value_location] get the beginning location of array's value
+    
+    dup1 mload  // [length_value,length_value_location]
+    
+
+    // Calculate the last_address_location
+    dup1  swap2       //  [length_value_location,length_value,length_value]
+    0x20 add dup1 swap2 // [length_value,1th_value_location,1th_value_location,length_value]  
+
+    0x01 swap1 sub   // [length_value-1,1th_value_location,1th_value_location,length_value]  
+    0x20 mul add     // [last_address_location,1th_value_location,length_value]
+    
+    dup1  swap3      //  [length_value,last_address_location,1th_value_location,last_address_location]
+    
+
+    // calculate the AverageValue and store in the memory
+    callvalue        //  [call_value,length_value,last_address_location,1th_value_location,last_address_location]
+    div              //  [AverageValue,last_address_location,1th_value_location,last_address_location]
+    swap1 0x20 add   //  [AverageValue_location,AverageValue,1th_value_location,last_address_location]
+
+    mstore              // [1th_value_location,last_address_location]
+
+
+    /*********************************Get the following_address and update current_address_index_location********************************************/
+    0x00 start jumpi   
+
+        
+        continue: 
+
+            // transfer eth
+            dup1 mload dup3    // [last_address_location,current_address,current_address_index_location,last_address_location]
+            TRANSFER_ETH()     // [transfer_result,current_address_index_location,last_address_location]
+            0x01 eq transfer_success jumpi
+                0x00 0x00 revert // if transfer faliure, revert
+            transfer_success: 
+           
+            // check the index,if encounter the last_address_location, just exits, else current_address_index_location+0x20
+            dup1  dup3         // [last_address_location,current_address_index_location,current_address_index_location,last_address_location]
+            eq end jumpi        // if current_address_index_location == last_address_location, exist the loop
+
+            start:
+            0x20 add            // [following_address_index_location,last_address_location]
+            0x01 continue jumpi 
+   
+
+    end:
+    // default, returen true. the blew code is must, otherwise will execute from the `0x00 start jumpi`
+    0x01
+    0x00 mstore
+    0x20 0x00 return  
+ }
+
+//  input stack [last_address_location,address]
+ #define fn TRANSFER_ETH() = takes(2) returns (1) {
+
+    0x20 add mload // [AverageValue,address]
+
+    // This demo, the target contract has no code, so the 4 deepest value in stack is 0x00    
+    // gas              gas
+    // address          address
+    // value            0x04 AverageValue
+    // argsOffset       0x00
+    // argsSize         0x00
+    // retOffset        0x00
+    // retSize          0x00
+
+
+    0x00 0x00 0x00 0x00  // [0x00,0x00,0x00,0x00,AverageValue,address]
+    swap4               //  [AverageValue,0x00,0x00,0x00,0x00,address]
+    swap1               //  [0x00,AverageValue,0x00,0x00,0x00,address]
+    swap5               //  [address,AverageValue,0x00,0x00,0x00,0x00]
+    gas                 //  [gas,address,AverageValue,0x00,0x00,0x00,0x00]
+    call
+
+}

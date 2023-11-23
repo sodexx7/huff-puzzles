@@ -21,11 +21,11 @@
 
     todo
     1: reorginze the funciton, make it more clean
-    2:check the 'receive' has more effective way
+    2: check the 'receive' has more effective way?
 
 
     tips: 
-    1) the call funtion have checked balance if the the eth is not enough, which have consider the gas
+    1) the call funtion have checked balance if the the eth is not enough(outOfFund), which have consider the gas
     2) if withdraw zero, just ignore and make the transaction complete
 
 ***/
@@ -114,10 +114,10 @@
     // retSize          0x00
 
 
-    0x00 0x00 0x00 0x00  // [argsOffset,argsSize,retOffset,retSize,current_balance,caller_address,ADDRESSES_DEPOSITED's slot]
-    0x04 calldataload    // [value,argsOffset,argsSize,retOffset,retSize,current_balance,caller_address,ADDRESSES_DEPOSITED's slot] 
-    caller               // [address,value,argsOffset,argsSize,retOffset,retSize,current_balance,caller_address,ADDRESSES_DEPOSITED's slot] 
-    gas                  // [gas,address,value,argsOffset,argsSize,retOffset,retSize,current_balance,caller_address,ADDRESSES_DEPOSITED's slot]
+    0x00 0x00 0x00 0x00  // [argsOffset,argsSize,retOffset,retSize]
+    0x04 calldataload    // [value,argsOffset,argsSize,retOffset,retSize] 
+    caller               // [address,value,argsOffset,argsSize,retOffset,retSize] 
+    gas                  // [gas,address,value,argsOffset,argsSize,retOffset,retSize]
     call
 
     // return the result 0:false,1:true
