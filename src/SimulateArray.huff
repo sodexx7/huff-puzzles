@@ -24,6 +24,163 @@
  #define error OutOfBounds()
  #define error ZeroArray()
 
+ #define constant ARRAY_UINT256_STORAGE = FREE_STORAGE_POINTER()
+
+/***
+    This implementation is related with the uint256[] array. The solidity handle this type as the below rules:
+    1) ARRAY_UINT256_STORAGE store the array's length
+    2) Based on above slot's value(0), like below formula calculating each index's slot location which store each the corrospending value
+        bytes32 location = keccak256(abi.encode(slot))    
+
+    But for the uint8[] array or the fixed array, It's a diffrent implementation. One point is they don't store the length.
+    reference:https://github.com/RareSkills/Udemy-Yul-Code/blob/main/Video-06-Storage-3.sol#L7
+
+
+    Other references:
+    1: https://gist.github.com/sodexx7/cdbb2fbaab50adc40435b4eaca63e71b
+    2: https://docs.soliditylang.org/en/latest/types.html#array-members
+
+    Some Notices:
+    1: Each funtion should return, even return nothing. perhaps it's related with the use of fn. I guess even complete the function, there are some following code will be executed
+
+**/
+
  #define macro MAIN() = takes(0) returns(0) {
+
+    // Get the function selector
+    0x00 calldataload 0xE0 shr
+
+     // Jump to the implementation of the corrospending function if the calldata matches the function selector
+    dup1 __FUNC_SIG(pushh) eq pushh jumpi
+    dup1 __FUNC_SIG(popp) eq popp jumpi
+    dup1 __FUNC_SIG(read) eq read jumpi
+    dup1 __FUNC_SIG(length) eq length jumpi
+    dup1 __FUNC_SIG(write) eq write jumpi
+
+    // Revert if an unrecognized function occured. 
+    0x00 0x00 revert
+
+    pushh:
+        PUSHH()
+        0x00 0x00 return // return nothing
+    popp:
+        POPP()
+        0x00 0x00 return // return nothing
+    read:
+        READ()
+        0x00 mstore 
+        0x20 0x00 return  
+    length:
+        LENGTH() 
+        0x00 mstore 0x20 0x00 return // return this slot's value
+
+    write:
+        WRITE()
+        0x00 0x00 return // return nothing
     
  }
+
+#define macro PUSHH() = takes(0) returns(0) {
+    
+    // for the pushh, the index is (current length) before updating the array's length, after pushh, the array's length will add 1
+    
+    0x04 calldataload               // [push_nums]
+    LENGTH()                        // [current_length,push_nums]
+
+    GET_SLOT_POSITION_BY_INDEX()    // [index_slot_location,push_nums]
+    UPDATE_VALUE_BY_SLOT_POSITION()
+    // update the length
+    LENGTH() 0x01 add               // [length+1]
+    UPDATE_LENGTH()
+    
+}
+
+#define macro POPP() = takes(0) returns(0) {
+
+   0x00  LENGTH() gt non_empty jumpi
+        __ERROR(ZeroArray)
+        0x00 mstore
+        0x04 0x00 revert        // test function require: bytes4(keccak256("ZeroArray()")) so just return 0x04 size
+   non_empty:
+
+    // delete the last element   <====>  set the last element as 0
+    0x01 LENGTH() sub               // [last_element_index]
+    GET_SLOT_POSITION_BY_INDEX()    // [last_element_index_location]
+    0x00 swap1                      // [last_element_index_location,0x00]                           
+    UPDATE_VALUE_BY_SLOT_POSITION()
+
+    // update the length
+    0x01 LENGTH() sub               // [length-1]
+    UPDATE_LENGTH()
+    
+}
+
+#define macro READ() = takes(0) returns(1) {
+
+    0x04 calldataload dup1  // [index,index]
+    VALID_INDEX_CHECK()     // [index]
+
+    GET_SLOT_POSITION_BY_INDEX() //[index_slot_location ]
+    sload 
+    
+}
+
+#define macro WRITE() = takes(0) returns(0) {
+    0x04 calldataload dup1  // [index,index]
+    VALID_INDEX_CHECK()     // [index]
+
+    GET_SLOT_POSITION_BY_INDEX() //[index_slot_location]
+    0x24 calldataload swap1      // [index_slot_location,write_num]
+    UPDATE_VALUE_BY_SLOT_POSITION()
+}
+
+// if no elements in the array, just return the defalut slot's value, for the uint256[], the slot stores the length value.
+#define macro LENGTH() = takes(0) returns(1) {
+
+    [ARRAY_UINT256_STORAGE]
+    sload 
+  
+}
+
+// input stack [new_length]
+#define fn UPDATE_LENGTH() = takes(1) returns(0){
+
+    [ARRAY_UINT256_STORAGE] // [slot,new_length]
+    sstore 
+}
+
+// input stack [index_slot_location,value]
+#define fn UPDATE_VALUE_BY_SLOT_POSITION() = takes(2) returns(0){
+    sstore 
+}
+
+// input stack [index]
+// Calcuate the slot_position by the index, just like:bytes32 location = keccak256(abi.encode(slot)); get location
+#define fn GET_SLOT_POSITION_BY_INDEX() = takes(1) returns(1){
+
+    // [index]
+    [ARRAY_UINT256_STORAGE] 0x00 mstore
+     0x20 0x00 sha3     // [based_location,index]
+     add                // [index_location]
+}
+
+// input stack [index]
+// check the index is in the range of [0,length-1] 
+//  READ and WRITE will check the index before executing
+#define fn VALID_INDEX_CHECK() = takes(1) returns(0){
+
+    LENGTH() dup1  // [length,length,index]
+    iszero illegalIndex jumpi
+        
+        0x01 swap1 sub swap1    //  [length,index]
+        
+        gt illegalIndex jumpi   // index <=  length-1   <======>  opposite of (index >  length-1) //// the result of (lt)  <===>  ! the result of (gt)
+               0x01 end jumpi
+           
+
+    illegalIndex:   // [length,index]
+        __ERROR(OutOfBounds)
+        0x00 mstore
+        0x04 0x00 revert
+    end:
+}
