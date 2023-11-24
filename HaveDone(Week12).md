@@ -19,8 +19,13 @@
 - [BasicBank](https://github.com/sodexx7/huff-puzzles/blob/main/src/BasicBank.huff)
 - [Distribute](https://github.com/sodexx7/huff-puzzles/blob/main/src/Distributor.huff) [✅]
 - [SimulateArray](https://github.com/sodexx7/huff-puzzles/blob/main/src/SimulateArray.huff) [✅]
+- Ethernaut 19 - Alien Codex
+    * [HackAlienCodex](https://github.com/sodexx7/security_related/blob/1377d3686f265ecb852beea281f302080398d07f/ethernaut/contracts/contracts/attacks/MySolution/HackAlienCodex.sol#L58)
+    * [AlienCodex](https://github.com/sodexx7/security_related/blob/1377d3686f265ecb852beea281f302080398d07f/ethernaut/contracts/contracts/levels/AlienCodex.sol#L2)
+    * yarn hardhat test test/levels/AlienCodex.test.js
+    * https://ethernaut.openzeppelin.com/level/19
 
-* The marked puzzles, I think they are very important, cause related the complex data structure(mapping array), important opcodes(call,create), how to handle string.
+*The marked puzzles, I think they are very important, cause related the complex data structure(mapping array), important opcodes(call,create), how to handle string.*
 
 ## TODO
 1. some opcode should organize more elegant, especially before the SimulateArray, such as distribute
